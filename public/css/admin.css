@@ -346,3 +346,7 @@ details.keydetails[open] summary::after { transform: rotate(90deg); }
 .py-chip .cap { color: var(--text-faint); font-weight: 500; font-size: 10.5px; }
 .py-chip.capped { border-color: #5e4a17; color: #e3b341; }
 .py-preview-meta { margin-left: auto; color: var(--text-faint); font-size: 11.5px; }
+
+/* fix: global select{width:100%} let the level dropdown eat the flex row and
+   collapse the skill dropdown — give the level select a fixed basis instead */
+.py-add-row #py-add-level { width: 140px; flex: 0 0 140px; }
