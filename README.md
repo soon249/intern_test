@@ -455,3 +455,5 @@ purely server-side.
   执行力)+ 1 道开放式问题。作为平台后续"软技能 / 职场行为测评"模块的题源材料
   (situational-judgment test; a future engine mode can materialise these as MCQ tasks and
   score them per competency dimension)。
+- [`docs/候选人邀请-考题提醒.md`](docs/候选人邀请-考题提醒.md) — 通知候选人参加测评的消息模板
+  (主管邀约 / HR 到场版 / 备考提醒小条,内容与题库对应,直接复制发送)。
