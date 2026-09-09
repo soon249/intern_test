@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sign in — Intern Assessment Platform</title>
+<link rel="stylesheet" href="/css/app.css">
+</head>
+<body>
+<div class="login-wrap">
+  <div class="login-card">
+    <div class="brand"><span class="brand-mark">⌘</span> Intern Assessment Platform</div>
+    <div class="sub">Internal technical assessment system</div>
+    <form id="login-form">
+      <label for="username">Username</label>
+      <input type="text" id="username" autocomplete="username" required>
+      <label for="password">Password</label>
+      <input type="password" id="password" autocomplete="current-password" required>
+      <div class="error-box" id="err"></div>
+      <div style="margin-top:18px">
+        <button type="submit" class="primary" style="width:100%" id="btn">Sign in</button>
+      </div>
+    </form>
+  </div>
+</div>
+<div id="toast"></div>
+<script src="/js/common.js"></script>
+<script src="/js/login.js"></script>
+</body>
+</html>

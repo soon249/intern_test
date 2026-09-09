@@ -1,0 +1,15 @@
+{
+  "name": "intern-assessment-platform",
+  "version": "1.0.0",
+  "description": "Internal intern technical assessment system (20-minute cybersecurity coding test)",
+  "type": "module",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --watch server.js",
+    "test": "node tests/run-tests.mjs"
+  },
+  "dependencies": {
+    "express": "^4.19.2"
+  }
+}

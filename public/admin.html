@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Interviewer Dashboard — Intern Assessment Platform</title>
+<link rel="stylesheet" href="/css/app.css">
+<link rel="stylesheet" href="/css/admin.css">
+</head>
+<body>
+<header class="topbar">
+  <span class="brand"><span class="brand-mark">⌘</span> Interviewer Dashboard</span>
+  <span class="spacer"></span>
+  <span class="muted" id="me"></span>
+  <button class="ghost small" id="logout">Sign out</button>
+</header>
+
+<div class="admin-layout">
+  <aside class="sidebar">
+    <div class="sidebar-actions">
+      <button class="primary" id="new-candidate">+ New candidate</button>
+      <button id="new-python">🐍 New Python assessment</button>
+      <a href="/admin/cheatsheet" target="_blank" class="cheat-link">📖 评分手册(全部答案)</a>
+    </div>
+    <div class="side-title">Candidates</div>
+    <div id="cand-list" class="cand-list"></div>
+  </aside>
+  <main class="admin-main" id="main">
+    <div class="card"><p class="muted">Select a candidate to view their assessment.</p></div>
+  </main>
+</div>
+
+<!-- new candidate modal -->
+<div class="modal-back" id="nc-back">
+  <div class="modal">
+    <h2>Create candidate</h2>
+    <label for="nc-name">Full name *</label>
+    <input type="text" id="nc-name" placeholder="e.g. John Tan">
+    <label for="nc-email">Email</label>
+    <input type="text" id="nc-email" placeholder="optional">
+    <label for="nc-position">Position</label>
+    <input type="text" id="nc-position" value="Cybersecurity Intern">
+    <div class="error-box" id="nc-err"></div>
+    <div class="modal-actions">
+      <button id="nc-cancel">Cancel</button>
+      <button class="primary" id="nc-ok">Create</button>
+    </div>
+  </div>
+</div>
+
+<!-- one-time password modal -->
+<div class="modal-back" id="otp-back">
+  <div class="modal">
+    <h2>Candidate created</h2>
+    <p class="muted">Share these credentials with the candidate. <b>The password is shown only once.</b></p>
+    <div class="data-block mt-12" id="otp-body"></div>
+    <div class="modal-actions">
+      <button id="otp-copy">Copy password</button>
+      <button class="primary" id="otp-close">Done</button>
+    </div>
+  </div>
+</div>
+
+<!-- python assessment / skill profile modal -->
+<div class="modal-back" id="py-back">
+  <div class="modal modal-wide">
+    <h2>Python Technical Assessment</h2>
+    <label for="py-candidate">Candidate *</label>
+    <select id="py-candidate"></select>
+    <label for="py-mode">Assessment mode</label>
+    <select id="py-mode">
+      <option value="cv_skill">CV Skill Assessment</option>
+      <option value="standard">Standard Assessment</option>
+      <option value="interview_followup">Interview Follow-Up</option>
+    </select>
+    <div class="faint py-mode-hint" id="py-mode-hint"></div>
+    <div class="py-options-row">
+      <div>
+        <label for="py-duration">Duration (minutes)</label>
+        <input type="number" id="py-duration" class="py-duration" value="30" min="5" max="240">
+      </div>
+      <label class="py-check"><input type="checkbox" id="py-randomize" checked> Randomize questions</label>
+    </div>
+    <label class="mt-12">Candidate skill profile (from CV / manual)</label>
+    <div id="py-skills" class="skill-editor"></div>
+    <div class="py-add-row">
+      <select id="py-add-skill"></select>
+      <select id="py-add-level">
+        <option value="beginner">Beginner</option>
+        <option value="intermediate" selected>Intermediate</option>
+        <option value="advanced">Advanced</option>
+        <option value="expert">Expert</option>
+      </select>
+      <button class="small" id="py-skill-add">Add</button>
+    </div>
+    <p class="faint mt-8">In CV Skill mode, questions are generated only for claimed skills (plus general baselines). Unclaimed-but-listed skills such as SQL / ML stay NOT TESTED.</p>
+    <div class="error-box" id="py-err"></div>
+    <div class="modal-actions">
+      <button id="py-cancel">Cancel</button>
+      <button id="py-save-skills">Save skills only</button>
+      <button class="primary" id="py-ok">Create assessment</button>
+    </div>
+  </div>
+</div>
+
+<!-- report modal -->
+<div class="modal-back" id="rep-back">
+  <div class="modal modal-report">
+    <div id="rep-body"></div>
+    <div class="modal-actions">
+      <button id="rep-print">Print / Save PDF</button>
+      <button class="primary" id="rep-close">Close</button>
+    </div>
+  </div>
+</div>
+
+<!-- confirm modal -->
+<div class="modal-back" id="modal-back">
+  <div class="modal">
+    <h2 id="modal-title"></h2>
+    <p class="muted" id="modal-body"></p>
+    <div class="modal-actions">
+      <button id="modal-cancel">Cancel</button>
+      <button class="primary" id="modal-ok">Confirm</button>
+    </div>
+  </div>
+</div>
+<div id="toast"></div>
+
+<script src="/js/common.js"></script>
+<script src="/js/admin.js"></script>
+</body>
+</html>

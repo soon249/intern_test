@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="color-scheme" content="dark">
+<title>Assessment — Candidate</title>
+<link rel="stylesheet" href="/css/app.css">
+<link rel="stylesheet" href="/css/candidate.css">
+</head>
+<body>
+<header class="topbar">
+  <span class="brand"><span class="brand-mark">⌘</span> <span class="brand-text">Cybersecurity Technical Assessment</span></span>
+  <span class="spacer"></span>
+  <span id="progress" class="progress-track" role="group" aria-label="Assessment progress" hidden></span>
+  <span class="timer-chip" id="timer" role="timer" aria-label="Time remaining" hidden>--:--</span>
+  <button class="ghost small" id="logout">Sign out</button>
+</header>
+
+<main class="page page-narrow" id="main">
+  <div class="card center-note"><p class="muted">Loading…</p></div>
+</main>
+
+<!-- confirm modal -->
+<div class="modal-back" id="modal-back">
+  <div class="modal">
+    <h2 id="modal-title"></h2>
+    <p class="muted" id="modal-body"></p>
+    <div class="modal-actions">
+      <button id="modal-cancel">Cancel</button>
+      <button class="primary" id="modal-ok">Confirm</button>
+    </div>
+  </div>
+</div>
+<div id="toast"></div>
+
+<script src="/js/common.js"></script>
+<script src="/js/candidate.js"></script>
+</body>
+</html>

@@ -1,0 +1,51 @@
+/* Printable light theme for the interviewer cheatsheet (CSP-compliant external file). */
+* { box-sizing: border-box; }
+body {
+  margin: 0; padding: 24px;
+  background: #eef1f5; color: #1a2233;
+  font-family: -apple-system, "Segoe UI", "Microsoft YaHei", Roboto, sans-serif;
+  font-size: 14px; line-height: 1.65;
+}
+.cheat-sheet { max-width: 860px; margin: 0 auto; }
+header h1 { font-size: 24px; margin: 0 0 6px; }
+header .meta { color: #5a6a80; margin: 0 0 18px; }
+.cheat-card {
+  background: #fff; border: 1px solid #d5dbe4; border-radius: 10px;
+  padding: 18px 22px; margin-bottom: 16px;
+  box-shadow: 0 1px 3px rgba(15,25,45,.06);
+}
+.cheat-card h2 { font-size: 17px; margin: 0 0 10px; border-bottom: 2px solid #e6eaf1; padding-bottom: 8px; }
+.cheat-card ol, .cheat-card ul { margin: 6px 0; padding-left: 22px; }
+.cheat-card li { margin: 4px 0; }
+.tag {
+  display: inline-block; vertical-align: middle;
+  background: #fff3d6; border: 1px solid #e8c96a; color: #7a5b00;
+  font-size: 11px; font-weight: 600; border-radius: 999px; padding: 1px 10px; margin-left: 6px;
+}
+.boss {
+  background: #eaf3ff; border: 1px solid #b9d4f7; border-radius: 8px;
+  padding: 10px 14px; margin: 10px 0;
+}
+.boss b { color: #14538f; }
+.q, .ans {
+  border: 1px solid #dfe4ec; border-radius: 8px;
+  padding: 8px 12px; margin: 10px 0; background: #fafbfd;
+}
+.ans { background: #f2fbf4; border-color: #bfe4c8; }
+.q > b, .ans > b { display: block; margin-bottom: 4px; font-size: 12.5px; }
+.q pre, .ans pre {
+  margin: 0; white-space: pre-wrap; word-break: break-word;
+  font-family: ui-monospace, Consolas, monospace; font-size: 12.5px; line-height: 1.55;
+}
+.ans pre { color: #14532d; }
+table { width: 100%; border-collapse: collapse; margin: 10px 0; }
+th, td { border: 1px solid #d5dbe4; padding: 6px 10px; text-align: left; }
+th { background: #f2f5f9; }
+td.num, .total td { text-align: right; font-variant-numeric: tabular-nums; }
+.total td { font-weight: 700; }
+.tip { background: #fffbe8; border: 1px dashed #e3c96b; border-radius: 8px; padding: 8px 12px; margin: 10px 0 0; }
+footer { text-align: center; color: #8592a5; font-size: 12px; padding: 12px 0 30px; }
+@media print {
+  body { background: #fff; padding: 0; }
+  .cheat-card { box-shadow: none; break-inside: avoid; }
+}
