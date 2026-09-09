@@ -51,12 +51,14 @@ function setErr(el, msg) { el.textContent = msg || ''; el.classList.add('show');
   document.getElementById('py-skill-add').onclick = addSkillRow;
   document.getElementById('py-ok').onclick = createPythonAssessment;
   document.getElementById('py-save-skills').onclick = saveSkillsOnly;
-  document.getElementById('py-candidate').onchange = () => loadSkillRows(document.getElementById('py-candidate').value);
-  document.getElementById('py-mode').addEventListener('change', updateModeHint);
+  document.getElementById('py-candidate').onchange = () => { loadSkillRows(document.getElementById('py-candidate').value); refreshPyPreview(); };
+  document.getElementById('py-mode').addEventListener('change', () => { updateModeHint(); refreshPyPreview(); });
+  document.getElementById('py-count').addEventListener('input', refreshPyPreview);
 })();
 
 // ---------- python assessment / skill profile ----------
 let pyCatalog = null;
+let pyPreviewTimer = null;
 
 const PY_MODE_HINTS = {
   cv_skill: "Questions are generated only for the candidate's claimed skills, plus general baselines. Profiled skills that are not assessed stay NOT TESTED.",
@@ -64,9 +66,50 @@ const PY_MODE_HINTS = {
   interview_followup: 'Short question set for a live session; ask deeper follow-ups verbally and record them as interviewer notes.'
 };
 
+const PY_SECTION_SHORT = {
+  FUNDAMENTALS: 'Fund', DATA_PROCESSING: 'Data', CSV_PANDAS: 'CSV', DEBUGGING: 'Debug',
+  WEB_API: 'API', SCRAPING: 'Scrape', PROBLEM_SOLVING: 'Practical', CODE_QUALITY: 'Quality', EXPLANATION: 'Explain'
+};
+
 function updateModeHint() {
   const hint = document.getElementById('py-mode-hint');
   if (hint) hint.textContent = PY_MODE_HINTS[document.getElementById('py-mode').value] || '';
+}
+
+// live composition preview: asks the server what WOULD be generated with the
+// current candidate / mode / question count — nothing is created
+async function refreshPyPreview() {
+  const box = document.getElementById('py-preview');
+  if (!box) return;
+  clearTimeout(pyPreviewTimer);
+  pyPreviewTimer = setTimeout(async () => {
+    try {
+      const r = await api('/api/admin/python-assessments/preview', {
+        method: 'POST',
+        body: {
+          candidateId: Number(document.getElementById('py-candidate').value) || undefined,
+          mode: document.getElementById('py-mode').value,
+          totalQuestions: document.getElementById('py-count').value || null
+        }
+      });
+      if (!r.sections.length) {
+        box.hidden = true;
+        return;
+      }
+      const chips = r.sections.map(s =>
+        `<span class="py-chip${s.selected >= s.poolSize ? ' capped' : ''}" title="${esc(s.label)}: ${s.selected} of ${s.poolSize} in pool">
+          ${esc(PY_SECTION_SHORT[s.code] || s.label)} ${s.selected}<span class="cap">/${s.poolSize}</span>
+        </span>`).join('');
+      const extras = [];
+      if (r.followupCount) extras.push(`+${r.followupCount} hidden follow-ups`);
+      extras.push(`≈${r.taskCountEstimate} tasks`);
+      extras.push(`suggested ${r.suggestedMinutes} min`);
+      box.innerHTML = `${chips}<span class="py-preview-meta">${esc(extras.join(' · '))}</span>`;
+      box.hidden = false;
+    } catch {
+      box.hidden = true;
+    }
+  }, 250);
 }
 
 async function loadPyCatalog() {
@@ -88,9 +131,11 @@ async function openPyModal(candidateId = null) {
     `<option value="${c.id}">${esc(c.name)} (${esc(c.username)})</option>`).join('');
   if (candidateId) sel.value = String(candidateId);
   clearErr(document.getElementById('py-err'));
+  document.getElementById('py-count').value = '';
   updateModeHint();
   document.getElementById('py-back').classList.add('open');
   await loadSkillRows(sel.value);
+  refreshPyPreview();
 }
 
 function skillRowHtml(skillName, level) {
@@ -166,6 +211,7 @@ async function createPythonAssessment() {
   const err = document.getElementById('py-err');
   clearErr(err);
   try {
+    const countVal = document.getElementById('py-count').value;
     const r = await api('/api/admin/python-assessments', {
       method: 'POST',
       body: {
@@ -173,16 +219,20 @@ async function createPythonAssessment() {
         mode: document.getElementById('py-mode').value,
         randomize: document.getElementById('py-randomize').checked,
         durationSeconds: Number(document.getElementById('py-duration').value) * 60,
+        totalQuestions: countVal ? Number(countVal) : null,
         skills: collectSkills()
       }
     });
     document.getElementById('py-back').classList.remove('open');
-    toast(`Python assessment created — ${r.questionCount} questions, ${r.taskCount} tasks (incl. hidden follow-ups)`);
+    const fu = r.taskCount - r.questionCount;
+    toast(`Python assessment created — ${r.questionCount} questions` +
+      (fu > 0 ? ` + ${fu} hidden follow-ups` : '') + ` (${r.taskCount} tasks)`);
     currentSessionId = r.sessionId;
     await loadCandidates();
     await loadDetail(r.sessionId);
   } catch (e) {
-    setErr(err, e.message || 'Failed');
+    setErr(err, e.message === 'INVALID_TOTAL_QUESTIONS'
+      ? 'Question count must be between 3 and 40.' : (e.message || 'Failed'));
   }
 }
 

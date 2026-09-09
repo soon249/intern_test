@@ -475,6 +475,37 @@ try {
   r = await admin.req('POST', '/api/admin/python-assessments', { candidateId: 999999 });
   check('PY: generation for unknown candidate → 404', r.status === 404);
 
+  console.log('\n== python module: question count configuration & preview ==');
+  const peteSessionsBefore = (await admin.req('GET', '/api/admin/candidates')).data.candidates
+    .find(c => c.name === 'Python Pete').sessions.length;
+  r = await admin.req('POST', '/api/admin/python-assessments/preview', { candidateId: pete.id, mode: 'standard', totalQuestions: 20 });
+  check('PY: preview returns per-section plan without creating anything', r.status === 200 &&
+    r.data.questionCount === 20 && r.data.sections.length >= 7 &&
+    r.data.sections.every(s => s.poolSize === 0 || (s.selected >= 1 && s.selected <= s.poolSize)) &&
+    r.data.sessionId === undefined && r.data.suggestedMinutes >= 15, JSON.stringify(r.data));
+  const peteSessionsAfterPreview = (await admin.req('GET', '/api/admin/candidates')).data.candidates
+    .find(c => c.name === 'Python Pete').sessions.length;
+  check('PY: preview is read-only (no session created)', peteSessionsAfterPreview === peteSessionsBefore);
+
+  r = await admin.req('POST', '/api/admin/python-assessments', { candidateId: pete.id, mode: 'standard', totalQuestions: 20, randomize: false });
+  check('PY: totalQuestions=20 honoured', r.status === 200 && r.data.questionCount === 20, `q=${r.data.questionCount}`);
+  const tqDetail = (await admin.req('GET', `/api/admin/assessments/${r.data.sessionId}`)).data;
+  check('PY: 20-question rubric still totals exactly 100', tqDetail.sections.reduce((a, s) => a + s.maxScore, 0) === 100);
+  check('PY: 20-question assessment walked in sequence', tqDetail.tasks.filter(t => t.unlockMode !== 'never_candidate').length >= 20);
+
+  r = await admin.req('POST', '/api/admin/python-assessments/preview', { candidateId: pete.id, mode: 'interview_followup', totalQuestions: 30 });
+  check('PY: preview clamps request to the available pool', r.status === 200 && r.data.questionCount <= 11 && r.data.questionCount >= 3,
+    `q=${r.data.questionCount}`);
+  r = await admin.req('POST', '/api/admin/python-assessments/preview', { candidateId: pete.id, totalQuestions: 2 });
+  check('PY: invalid question count rejected', r.status === 400);
+  r = await admin.req('POST', '/api/admin/python-assessments', { candidateId: pete.id, mode: 'cv_skill', totalQuestions: 99 });
+  check('PY: out-of-range count on create rejected', r.status === 400);
+  r = await admin.req('POST', '/api/admin/python-assessments', { candidateId: pete.id, mode: 'cv_skill' });
+  check('PY: default generation (no count) unchanged', r.status === 200 && r.data.questionCount >= 10 && r.data.questionCount <= 15,
+    `q=${r.data.questionCount}`);
+  r = await pyCand.req('POST', '/api/admin/python-assessments/preview', { candidateId: pete.id, mode: 'standard' });
+  check('PY: candidate cannot call preview', r.status === 403);
+
   console.log('\n== python module: stranded-session warning + sessions list ==');
   // candidate with an IN_PROGRESS session on another (cybersec) assessment:
   // generation must still succeed but warn that the other session is set aside

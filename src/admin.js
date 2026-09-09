@@ -4,7 +4,7 @@ import { db, now, recordEvent, getSetting, setSetting } from './db.js';
 import { requireRole } from './auth.js';
 import { computeIndicators } from './indicators.js';
 import {
-  createPythonAssessment, buildSkillVerification, scoreLevelFor,
+  createPythonAssessment, previewPythonAssessment, buildSkillVerification, scoreLevelFor,
   pythonRecommendationFor, isPythonAssessment, PY_RECOMMENDATION_OPTIONS, ASSESSMENT_MODES
 } from './pythonAssessment.js';
 import { SKILL_CATALOG, DIMENSIONS, DEFAULT_SECTION_COUNTS, QUESTIONS } from './pythonQuestions.js';
@@ -416,17 +416,53 @@ adminRouter.get('/python-assessments/catalog', requireRole('admin'), (req, res) 
   });
 });
 
+// read-only preview of a would-be generation (per-section plan, follow-up
+// estimate, suggested duration) — lets the interviewer see the composition
+// before creating anything
+adminRouter.post('/python-assessments/preview', requireRole('admin'), (req, res) => {
+  const { candidateId, mode = 'cv_skill', perSection, totalQuestions, skills } = req.body || {};
+  let claimedSkills = Array.isArray(skills) ? skills : null;
+  if (!claimedSkills) {
+    const cid = Number(candidateId);
+    claimedSkills = Number.isInteger(cid) && cid > 0
+      ? db.prepare('SELECT skill_name, claimed_level FROM candidate_skills WHERE candidate_id = ?')
+          .all(cid).map(r => ({ skillName: r.skill_name, claimedLevel: r.claimed_level }))
+      : [];
+  }
+  const tq = totalQuestions == null || totalQuestions === ''
+    ? null
+    : Number(totalQuestions);
+  if (tq != null && (!Number.isFinite(tq) || tq < 3 || tq > 40)) {
+    return res.status(400).json({ error: 'INVALID_TOTAL_QUESTIONS' });
+  }
+  try {
+    res.json(previewPythonAssessment({
+      mode: String(mode), claimedSkills,
+      perSection: perSection && typeof perSection === 'object' ? perSection : null,
+      totalQuestions: tq
+    }));
+  } catch (err) {
+    if (err.status) return res.status(err.status).json({ error: err.message });
+    throw err;
+  }
+});
+
 // generate (and assign) a Python assessment for a candidate
 adminRouter.post('/python-assessments', requireRole('admin'), (req, res) => {
-  const { candidateId, mode = 'cv_skill', randomize, durationSeconds, perSection, skills } = req.body || {};
+  const { candidateId, mode = 'cv_skill', randomize, durationSeconds, perSection, totalQuestions, skills } = req.body || {};
   const cid = Number(candidateId);
   if (!Number.isInteger(cid) || cid <= 0) return res.status(400).json({ error: 'INVALID_CANDIDATE' });
+  const tq = totalQuestions == null || totalQuestions === '' ? null : Number(totalQuestions);
+  if (tq != null && (!Number.isFinite(tq) || tq < 3 || tq > 40)) {
+    return res.status(400).json({ error: 'INVALID_TOTAL_QUESTIONS' });
+  }
   try {
     const result = createPythonAssessment({
       adminId: req.user.id, candidateId: cid,
       mode: String(mode), randomize: randomize !== false,
       durationSeconds: Number(durationSeconds) || 1800,
       perSection: perSection && typeof perSection === 'object' ? perSection : null,
+      totalQuestions: tq,
       skills: Array.isArray(skills) ? skills : null
     });
     // Stranded-session visibility: if the candidate still has an active session

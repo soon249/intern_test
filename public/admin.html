@@ -76,11 +76,20 @@
     <div class="faint py-mode-hint" id="py-mode-hint"></div>
     <div class="py-options-row">
       <div>
+        <label for="py-count">Question count <span class="faint">(empty = balanced default)</span></label>
+        <input type="number" id="py-count" class="py-count" min="4" max="27" placeholder="default"
+          list="py-count-presets" autocomplete="off">
+        <datalist id="py-count-presets">
+          <option value="10"><option value="13"><option value="16"><option value="20">
+        </datalist>
+      </div>
+      <div>
         <label for="py-duration">Duration (minutes)</label>
         <input type="number" id="py-duration" class="py-duration" value="30" min="5" max="240">
       </div>
       <label class="py-check"><input type="checkbox" id="py-randomize" checked> Randomize questions</label>
     </div>
+    <div id="py-preview" class="py-preview" hidden></div>
     <label class="mt-12">Candidate skill profile (from CV / manual)</label>
     <div id="py-skills" class="skill-editor"></div>
     <div class="py-add-row">

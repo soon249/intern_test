@@ -330,3 +330,19 @@ details.keydetails[open] summary::after { transform: rotate(90deg); }
   .admin-main { padding: 14px; }
   .detail-head h1 { font-size: 18px; }
 }
+
+/* ---------- question count + composition preview ---------- */
+.py-count { width: 110px; }
+.py-preview {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 6px;
+  background: var(--bg); border: 1px solid var(--border); border-radius: 6px;
+  padding: 8px 10px; margin-top: 10px; animation: pyFade .16s ease;
+}
+.py-chip {
+  display: inline-flex; align-items: baseline; gap: 2px;
+  background: var(--bg-hover); border: 1px solid var(--border-strong); border-radius: 999px;
+  padding: 2px 9px; font-size: 11.5px; font-weight: 600;
+}
+.py-chip .cap { color: var(--text-faint); font-weight: 500; font-size: 10.5px; }
+.py-chip.capped { border-color: #5e4a17; color: #e3b341; }
+.py-preview-meta { margin-left: auto; color: var(--text-faint); font-size: 11.5px; }

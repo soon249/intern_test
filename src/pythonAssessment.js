@@ -58,7 +58,115 @@ function dimensionsForMode(mode, claimedSkills) {
   return dims;
 }
 
-export function createPythonAssessment({ adminId, candidateId, mode = 'cv_skill', randomize = true, durationSeconds = 1800, perSection = null, skills = null }) {
+const DIM_WEIGHT = new Map(DIMENSIONS.map(d => [d.code, d.weight]));
+
+function poolsFor(includeDims) {
+  const pools = {};
+  for (const dim of includeDims) {
+    pools[dim] = db.prepare(
+      `SELECT * FROM question_bank WHERE category = ? AND is_hidden = 0 AND is_active = 1 ORDER BY id`
+    ).all(dim);
+  }
+  return pools;
+}
+
+/**
+ * Distribute a requested question total across the included dimensions:
+ * every dimension starts with 1 (highest rubric weight first), the remainder is
+ * filled proportionally to weight, always clamped to each dimension's pool size.
+ */
+export function distributeCounts(total, includeDims, pools) {
+  const dims = [...includeDims].sort((a, b) => (DIM_WEIGHT.get(b) || 0) - (DIM_WEIGHT.get(a) || 0));
+  const counts = Object.fromEntries(includeDims.map(d => [d, 0]));
+  let budget = Math.max(0, Math.floor(Number(total) || 0));
+  for (const d of dims) {
+    if (budget <= 0) break;
+    if (pools[d].length > 0) { counts[d] = 1; budget--; }
+  }
+  for (;;) {
+    if (budget <= 0) break;
+    const open = dims.filter(d => counts[d] < pools[d].length);
+    if (!open.length) break;
+    const totalWeight = open.reduce((a, d) => a + (DIM_WEIGHT.get(d) || 0), 0);
+    let moved = false;
+    for (const d of dims) {
+      if (budget <= 0) break;
+      if (counts[d] >= pools[d].length) continue;
+      const share = Math.max(1, Math.floor(budget * (DIM_WEIGHT.get(d) || 0) / totalWeight));
+      const add = Math.min(share, pools[d].length - counts[d], budget);
+      if (add > 0) { counts[d] += add; budget -= add; moved = true; }
+    }
+    if (!moved) break;
+  }
+  return counts;
+}
+
+/**
+ * Pure planner: picks questions per dimension according to perSection overrides,
+ * an explicit totalQuestions target, or the built-in defaults. No writes.
+ */
+export function planSelection({ mode = 'cv_skill', claimedSkills = [], randomize = true, perSection = null, totalQuestions = null }) {
+  const includeDims = dimensionsForMode(mode, claimedSkills);
+  const pools = poolsFor(includeDims);
+
+  let counts;
+  if (perSection && typeof perSection === 'object') {
+    counts = {};
+    for (const d of includeDims) {
+      const want = Number(perSection[d] ?? DEFAULT_SECTION_COUNTS[d] ?? 1);
+      counts[d] = Math.max(0, Math.min(Number.isFinite(want) ? Math.floor(want) : 1, pools[d].length));
+    }
+  } else if (totalQuestions != null && Number(totalQuestions) > 0) {
+    counts = distributeCounts(totalQuestions, includeDims, pools);
+  } else {
+    counts = {};
+    for (const d of includeDims) counts[d] = Math.min(Number(DEFAULT_SECTION_COUNTS[d] ?? 1) || 0, pools[d].length);
+  }
+
+  const followupsByParent = new Map();
+  for (const f of db.prepare(
+    `SELECT * FROM question_bank WHERE is_hidden = 1 AND is_active = 1 AND followup_of IS NOT NULL ORDER BY id`
+  ).all()) {
+    if (!followupsByParent.has(f.followup_of)) followupsByParent.set(f.followup_of, []);
+    followupsByParent.get(f.followup_of).push(f);
+  }
+
+  const selected = []; // {question, followups:[...]}
+  for (const dim of includeDims) {
+    const want = counts[dim];
+    if (!want) continue;
+    let pool = pools[dim];
+    if (randomize) pool = shuffle(pool);
+    for (const q of pool.slice(0, want)) {
+      selected.push({ question: q, followups: followupsByParent.get(q.code) || [] });
+    }
+  }
+  const followupCount = selected.reduce((a, s) => a + s.followups.length, 0);
+  return { includeDims, pools, counts, selected, followupCount, questionCount: selected.length };
+}
+
+/**
+ * Read-only preview of a would-be generation: per-section plan, hidden
+ * follow-up estimate and a suggested duration. Used by the admin dialog so the
+ * interviewer sees exactly what they are about to create.
+ */
+export function previewPythonAssessment({ mode = 'cv_skill', claimedSkills = [], perSection = null, totalQuestions = null }) {
+  const plan = planSelection({ mode, claimedSkills, randomize: false, perSection, totalQuestions });
+  const labels = new Map(DIMENSIONS.map(d => [d.code, d.label]));
+  return {
+    mode,
+    sections: plan.includeDims.map(d => ({
+      code: d, label: labels.get(d) || d,
+      selected: plan.counts[d], poolSize: plan.pools[d].length
+    })),
+    questionCount: plan.questionCount,
+    followupCount: plan.followupCount,
+    taskCountEstimate: plan.questionCount + plan.followupCount,
+    suggestedMinutes: Math.max(15, Math.round(plan.questionCount * 2.3))
+  };
+}
+
+export function createPythonAssessment({ adminId, candidateId, mode = 'cv_skill', randomize = true, durationSeconds = 1800, perSection = null, totalQuestions = null, skills = null }) {
   const candidate = db.prepare(
     `SELECT c.*, u.username FROM candidates c JOIN users u ON u.id = c.user_id WHERE c.id = ?`
   ).get(candidateId);
@@ -88,29 +196,9 @@ export function createPythonAssessment({ adminId, candidateId, mode = 'cv_skill'
   const durationMinutes = Math.round(duration / 60);
 
   // ---- question selection ----
-  const includeDims = dimensionsForMode(mode, claimedSkills);
-  const counts = { ...DEFAULT_SECTION_COUNTS, ...(perSection && typeof perSection === 'object' ? perSection : {}) };
-  const followupsByParent = new Map();
-  for (const f of db.prepare(
-    `SELECT * FROM question_bank WHERE is_hidden = 1 AND is_active = 1 AND followup_of IS NOT NULL ORDER BY id`
-  ).all()) {
-    if (!followupsByParent.has(f.followup_of)) followupsByParent.set(f.followup_of, []);
-    followupsByParent.get(f.followup_of).push(f);
-  }
-
-  const selected = []; // {question, followups:[...]}
-  for (const dim of includeDims) {
-    const want = Math.max(0, Number(counts[dim] ?? 1) || 0);
-    if (!want) continue;
-    let pool = db.prepare(
-      `SELECT * FROM question_bank WHERE category = ? AND is_hidden = 0 AND is_active = 1 ORDER BY id`
-    ).all(dim);
-    if (randomize) pool = shuffle(pool);
-    for (const q of pool.slice(0, want)) {
-      selected.push({ question: q, followups: followupsByParent.get(q.code) || [] });
-    }
-  }
-  const questionCount = selected.length;
+  const plan = planSelection({ mode, claimedSkills, randomize, perSection, totalQuestions });
+  const { selected } = plan;
+  const questionCount = plan.questionCount;
   if (questionCount < 3) throw Object.assign(new Error('NOT_ENOUGH_QUESTIONS'), { status: 409 });
 
   // ---- rubric: rescale dimension weights so the total is exactly 100 ----
@@ -205,7 +293,7 @@ export function createPythonAssessment({ adminId, candidateId, mode = 'cv_skill'
 
   return {
     assessmentId, sessionId: sessionRes.lastInsertRowid,
-    questionCount, taskCount: idx, mode, durationSeconds: duration,
+    questionCount, followupCount: plan.followupCount, taskCount: idx, mode, durationSeconds: duration,
     rubric: rubric.map(r => ({ code: r.code, label: r.label, maxScore: r.maxScore }))
   };
 }

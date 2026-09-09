@@ -386,7 +386,11 @@ coding and a technical-explanation question — never a pure-MCQ test.
 | `interview_followup` | Short practical set; requirement-change follow-ups are materialised as `interviewer_only` tasks the interviewer asks verbally. |
 
 `randomize` (admin-configurable) shuffles each category pool before picking; otherwise the
-fixed pool order is used. Rubric weights (Fundamentals 15, Data Processing 15, CSV/Pandas 15,
+fixed pool order is used. **Question count is configurable**: leave it empty for the balanced
+default (13 questions), or enter a target (e.g. 20) — the planner distributes it across the
+included dimensions proportionally to rubric weight, clamped to each dimension's pool, and the
+dialog shows a live composition preview (per-section chips, hidden follow-up estimate and a
+suggested duration) via `POST /api/admin/python-assessments/preview` before anything is created. Rubric weights (Fundamentals 15, Data Processing 15, CSV/Pandas 15,
 Debugging 15, API/Web 10, Scraping 10, Problem Solving 10, Code Quality 5, Explanation 5) are
 **rescaled so every generated assessment totals exactly 100 points**.
 
